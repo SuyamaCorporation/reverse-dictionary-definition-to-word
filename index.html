@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reverse Dictionary Quiz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 min-h-screen p-4">
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-3xl font-bold text-white text-center mb-1">Reverse Dictionary Quiz</h1>
+  <p class="text-gray-400 text-center mb-4 text-sm">Read the definition and type the word!</p>
+
+  <div id="stats" class="flex justify-between items-center text-gray-300 mb-4 bg-gray-800 rounded-xl px-4 py-2">
+    <span>Question: <span id="q-num" class="text-white font-bold">1</span>/30</span>
+    <span>Score: <span id="score" class="text-yellow-400 font-bold">0</span></span>
+    <span>Category: <span id="cat-badge" class="text-blue-400 font-semibold"></span></span>
+  </div>
+
+  <!-- Timer -->
+  <div class="flex items-center gap-3 mb-4 bg-gray-800 rounded-xl px-4 py-2">
+    <div class="flex-1 bg-gray-700 rounded-full h-3">
+      <div id="timer-bar" class="h-3 rounded-full bg-green-500 transition-all" style="width:100%"></div>
+    </div>
+    <div id="timer-disp" class="text-2xl font-bold text-white w-10 text-right">30</div>
+  </div>
+
+  <!-- Question card -->
+  <div class="bg-gray-800 rounded-2xl p-6 mb-4">
+    <p class="text-gray-400 text-sm mb-2 uppercase tracking-wide">Definition</p>
+    <p class="text-white text-xl leading-relaxed" id="definition-text"></p>
+  </div>
+
+  <!-- Hint -->
+  <div id="hint-area" class="bg-gray-700 rounded-xl px-4 py-2 mb-4 flex items-center gap-3">
+    <span class="text-gray-400 text-sm">Hint:</span>
+    <span id="hint-text" class="text-yellow-300 font-mono text-lg tracking-widest"></span>
+    <button id="hint-btn" class="ml-auto bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg text-sm font-semibold" aria-label="Show first letter hint">Show Hint (-2pts)</button>
+  </div>
+
+  <!-- Answer input -->
+  <div class="flex gap-3 mb-4">
+    <input id="answer-input" type="text" placeholder="Type your answer here..." autocomplete="off"
+      class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:outline-none focus:border-blue-500 text-lg" aria-label="Answer input">
+    <button id="submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold" aria-label="Submit answer">Submit</button>
+  </div>
+
+  <!-- Feedback -->
+  <div id="feedback" class="hidden rounded-xl px-4 py-3 mb-4 text-center text-lg font-bold"></div>
+
+  <!-- Navigation -->
+  <button id="next-btn" class="hidden w-full bg-gray-600 hover:bg-gray-500 text-white py-3 rounded-xl font-semibold" aria-label="Next question">Next Question →</button>
+
+  <!-- Final screen -->
+  <div id="final-screen" class="hidden bg-gray-800 rounded-2xl p-8 text-center">
+    <h2 class="text-3xl font-bold text-white mb-4">Quiz Complete!</h2>
+    <div class="text-6xl font-bold text-yellow-400 mb-2" id="final-score-disp"></div>
+    <p class="text-gray-300 mb-2" id="final-details"></p>
+    <p class="text-gray-400 text-sm mb-6" id="final-grade"></p>
+    <button id="restart-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl text-lg font-bold" aria-label="Play again">Play Again</button>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+  // Everyday (10)
+  {word:'shadow',def:'A dark area formed when an object blocks light.',category:'Everyday'},
+  {word:'mirror',def:'A reflective surface used to see your own appearance.',category:'Everyday'},
+  {word:'clock',def:'A device that measures and displays the time.',category:'Everyday'},
+  {word:'ladder',def:'A structure with rungs used for climbing up or down.',category:'Everyday'},
+  {word:'candle',def:'A stick of wax with a wick that burns to give light.',category:'Everyday'},
+  {word:'blanket',def:'A large piece of soft fabric used to keep warm in bed.',category:'Everyday'},
+  {word:'compass',def:'A navigational tool that always points to magnetic north.',category:'Everyday'},
+  {word:'anchor',def:'A heavy object dropped from a ship to keep it from drifting.',category:'Everyday'},
+  {word:'telescope',def:'An optical instrument used to view distant objects, especially stars.',category:'Everyday'},
+  {word:'envelope',def:'A flat paper container used for sending letters by mail.',category:'Everyday'},
+  // Science (10)
+  {word:'gravity',def:'The force that attracts objects toward the center of the Earth.',category:'Science'},
+  {word:'photosynthesis',def:'The process by which green plants use sunlight to make food from CO2 and water.',category:'Science'},
+  {word:'osmosis',def:'The movement of water through a semi-permeable membrane from lower to higher solute concentration.',category:'Science'},
+  {word:'catalyst',def:'A substance that speeds up a chemical reaction without being consumed.',category:'Science'},
+  {word:'chromosome',def:'A thread-like structure carrying genetic information, found in the cell nucleus.',category:'Science'},
+  {word:'neutron',def:'A subatomic particle with no electric charge found in the nucleus of an atom.',category:'Science'},
+  {word:'hibernate',def:'To spend the winter in a dormant state, as some animals do.',category:'Science'},
+  {word:'eclipse',def:'An astronomical event where one celestial body moves into the shadow of another.',category:'Science'},
+  {word:'fossil',def:'The preserved remains or traces of an ancient organism found in rock.',category:'Science'},
+  {word:'alloy',def:'A metal made by combining two or more metallic elements.',category:'Science'},
+  // Advanced (10)
+  {word:'ephemeral',def:'Lasting for a very short time; transitory.',category:'Advanced'},
+  {word:'serendipity',def:'The occurrence of happy events by chance rather than design.',category:'Advanced'},
+  {word:'ubiquitous',def:'Present, appearing, or found everywhere.',category:'Advanced'},
+  {word:'paradox',def:'A statement that seems contradictory but may actually be true.',category:'Advanced'},
+  {word:'labyrinth',def:'A complicated irregular network of passages difficult to find one\'s way through.',category:'Advanced'},
+  {word:'juxtapose',def:'To place things close together to highlight contrasting qualities.',category:'Advanced'},
+  {word:'eloquent',def:'Fluent and persuasive in speaking or writing.',category:'Advanced'},
+  {word:'meticulous',def:'Showing great attention to detail; very careful and precise.',category:'Advanced'},
+  {word:'ambiguous',def:'Open to more than one interpretation; not having a single clear meaning.',category:'Advanced'},
+  {word:'tenacious',def:'Holding firmly to something; not giving up easily; persistent.',category:'Advanced'},
+];
+
+let currentQ = 0;
+let score = 0;
+let hintUsed = false;
+let answered = false;
+let timerInterval = null;
+let timeLeft = 30;
+const MAX_TIME = 30;
+
+function buildHintText(word, revealed) {
+  return word.split('').map((c, i) => i < revealed ? c : '_').join(' ');
+}
+
+function renderQuestion() {
+  const q = QUESTIONS[currentQ];
+  answered = false; hintUsed = false;
+  document.getElementById('q-num').textContent = currentQ + 1;
+  document.getElementById('score').textContent = score;
+  document.getElementById('cat-badge').textContent = q.category;
+  document.getElementById('definition-text').textContent = q.def;
+  document.getElementById('hint-text').textContent = buildHintText(q.word, 1);
+  document.getElementById('hint-btn').disabled = false;
+  document.getElementById('hint-btn').className = 'ml-auto bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg text-sm font-semibold';
+  document.getElementById('answer-input').value = '';
+  document.getElementById('answer-input').disabled = false;
+  document.getElementById('answer-input').focus();
+  document.getElementById('feedback').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('submit-btn').disabled = false;
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = MAX_TIME;
+  updateTimer();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimer();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  document.getElementById('timer-disp').textContent = timeLeft;
+  const pct = (timeLeft / MAX_TIME) * 100;
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'h-3 rounded-full transition-all ' + (timeLeft > 15 ? 'bg-green-500' : timeLeft > 8 ? 'bg-yellow-500' : 'bg-red-500');
+}
+
+function handleTimeout() {
+  if (answered) return;
+  answered = true;
+  const q = QUESTIONS[currentQ];
+  showFeedback(false, `Time's up! The answer was: ${q.word}`);
+  document.getElementById('answer-input').disabled = true;
+  document.getElementById('submit-btn').disabled = true;
+  showNext();
+}
+
+function checkAnswer() {
+  if (answered) return;
+  const input = document.getElementById('answer-input').value.trim().toLowerCase();
+  if (!input) return;
+  clearInterval(timerInterval);
+  answered = true;
+  const q = QUESTIONS[currentQ];
+  const correct = input === q.word.toLowerCase();
+  if (correct) {
+    const pts = hintUsed ? 1 : 2;
+    score += pts;
+  }
+  document.getElementById('score').textContent = score;
+  document.getElementById('hint-text').textContent = q.word.split('').join(' ');
+  if (correct) {
+    const pts = hintUsed ? 1 : 2;
+    showFeedback(true, `Correct! +${pts} points`);
+  } else {
+    showFeedback(false, `Wrong! The answer was: ${q.word}`);
+  }
+  document.getElementById('answer-input').disabled = true;
+  document.getElementById('submit-btn').disabled = true;
+  showNext();
+}
+
+function showFeedback(correct, msg) {
+  const fb = document.getElementById('feedback');
+  fb.classList.remove('hidden');
+  fb.textContent = msg;
+  fb.className = `rounded-xl px-4 py-3 mb-4 text-center text-lg font-bold ${correct ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`;
+}
+
+function showNext() {
+  if (currentQ < QUESTIONS.length - 1) {
+    document.getElementById('next-btn').classList.remove('hidden');
+  } else {
+    setTimeout(showFinal, 1200);
+  }
+}
+
+function showFinal() {
+  document.getElementById('feedback').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('stats').classList.add('hidden');
+  document.getElementById('timer-bar').parentElement.parentElement.classList.add('hidden');
+  document.querySelector('.bg-gray-800.rounded-2xl').classList.add('hidden');
+  document.getElementById('hint-area').classList.add('hidden');
+  document.querySelector('.flex.gap-3.mb-4').classList.add('hidden');
+
+  const maxScore = QUESTIONS.length * 2;
+  const pct = score / maxScore;
+  let grade = pct >= 0.9 ? 'Outstanding! A+' : pct >= 0.75 ? 'Excellent! A' : pct >= 0.6 ? 'Good! B' : pct >= 0.4 ? 'Fair. C' : 'Keep practicing! D';
+  document.getElementById('final-score-disp').textContent = `${score}/${maxScore}`;
+  document.getElementById('final-details').textContent = `${QUESTIONS.length} questions answered`;
+  document.getElementById('final-grade').textContent = grade;
+  document.getElementById('final-screen').classList.remove('hidden');
+}
+
+document.getElementById('hint-btn').addEventListener('click', () => {
+  if (hintUsed || answered) return;
+  hintUsed = true;
+  const q = QUESTIONS[currentQ];
+  document.getElementById('hint-text').textContent = buildHintText(q.word, 2);
+  document.getElementById('hint-btn').disabled = true;
+  document.getElementById('hint-btn').className = 'ml-auto bg-gray-600 text-gray-400 px-3 py-1 rounded-lg text-sm font-semibold cursor-not-allowed';
+});
+
+document.getElementById('submit-btn').addEventListener('click', checkAnswer);
+document.getElementById('answer-input').addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+
+document.getElementById('next-btn').addEventListener('click', () => {
+  currentQ++;
+  renderQuestion();
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  currentQ = 0; score = 0;
+  document.getElementById('final-screen').classList.add('hidden');
+  document.getElementById('stats').classList.remove('hidden');
+  document.getElementById('timer-bar').parentElement.parentElement.classList.remove('hidden');
+  document.querySelector('.bg-gray-800.rounded-2xl').classList.remove('hidden');
+  document.getElementById('hint-area').classList.remove('hidden');
+  document.querySelector('.flex.gap-3.mb-4').classList.remove('hidden');
+  renderQuestion();
+});
+
+renderQuestion();
+</script>
+</body>
+</html>
